@@ -279,6 +279,16 @@ with the PDFfit2 (diffpy) package. If None (the default), GSAS-II will see
 if PDFfit2 can be imported into the current Python.
 '''
 
+rmcprofile_exec = None
+'''Defines the full path to a compiled executable for RMCProfile (downloaded
+from https://rmcprofile.ornl.gov/download) If None (the default), GSAS-II 
+will see if RMCProfile is found in the path, as well as,
+where python, the GSAS-II Python files & binaries are located and the current 
+working directory. For MacOS, RMCProfile will run only from 
+/Applications/ so that is the only location checked if rmcprofile_exec is not
+specified. 
+'''
+
 lastUpdateNotice = 0
 '''Defines the version number for the last update notice that has been 
 shown. This should not need to be changed manually.

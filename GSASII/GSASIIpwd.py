@@ -2514,10 +2514,11 @@ def DoPeakFit(FitPgm,Peaks,Background,Limits,Inst,Inst2,data,fixback=None,prevVa
         return dataType,instDict,insVary
 
     def GetPkInstParms(parmDict,Inst,varyList):
-        '''This is where the default values for sigma & gamma
-        are set for peaks in single-peak fits when peakInstPrmMode is True
-        and the values are not being fit. This seems also to be done in 
-        GetPeaksParms (TODO: this routine is not needed?)
+        '''This sets default values for sigma & gamma in the 
+        single-peak fitting parameter dict when peakInstPrmMode is True
+        and the peak values are not being fit. (Why not alpha & beta?)
+        Note similar routine, GetPeaksParms, which sets values in the 
+        peak table. (TODO: add setting of alpha & beta here?)
         '''
         for name in Inst:
             Inst[name][1] = parmDict[name]
@@ -2596,9 +2597,12 @@ def DoPeakFit(FitPgm,Peaks,Background,Limits,Inst,Inst2,data,fixback=None,prevVa
         return peakDict,peakVary
 
     def GetPeaksParms(Inst,parmDict,Peaks,varyList):
-        '''Put values into the Peaks list from the refinement results from inside
-        the parmDict array. 
-        This is done prior for sigma & gamma in GetPkInstParms
+        '''Put single-peak fitting values into the Peaks List 
+        from the refinement results. Where values are not fit (unless 
+        peakInstPrmMode is False), they are computed from the 
+        Instrument Parameter values. 
+        Note that routine GetPkInstParms does this prior 
+        for sigma & gamma (only).
         '''
         names,_,_ = getHeaderInfo(Inst['Type'][0])
         off = 0
@@ -3429,6 +3433,52 @@ def MakeRMCPdat(PWDdata,Name,Phase,RMCPdict):
 #             break
 #     dspaces = [0.5/np.sqrt(G2lat.calc_rDsq2(H,G)) for H in np.eye(3)]
 #     return min(dspaces)
+
+def findrmcprofile():
+    '''Find where RMCProfile is installed. Tries the following:
+
+         1. Returns the Config var `rmcprofile_exec`, if defined. This 
+            is the executable to run.
+         2. The path is checked for a RMCprofile image. Also checked are
+            the location where the GSAS-II Python files are found, 
+            the location where GSAS-II binaries are found, the current 
+            working directory and the location where the Python 
+            interpreter is found. 
+            On MacOS the only place where RMCProfile can be installed
+            is /Applications/ so only that is checked.
+
+    :returns: the full path to a python executable that is assumed to
+      have fullrmc installed or None, if it was not found.
+    '''
+    rmcprofile_exe = GSASIIpath.GetConfigValue('rmcprofile_exec')
+    if rmcprofile_exe is not None:
+        if is_exe(rmcprofile_exe):
+            return rmcprofile_exe
+        else:
+            print(f'Config var rmcprofile_exec defined as {rmcprofile_exe!r} but file not found or not exe.')
+    pathlist = os.environ["PATH"].split(os.pathsep)
+    for p in (GSASIIpath.path2GSAS2,GSASIIpath.binaryPath,os.getcwd(),
+                  os.path.split(sys.executable)[0]):
+        if p not in pathlist: pathlist.append(p)
+    if sys.platform == "win32":
+        lookfor = "rmcprofile.exe"
+    elif sys.platform == "darwin":
+        lookfor = "rmcprofile"
+        # MacOS: there is only one place where RMCProfile will run
+        pathlist = ["/Applications/RMCProfile.app/Contents/MacOS/exe"]
+        #pathlist.insert(0,"/Applications/RMCProfile.app/Contents/MacOS/exe")
+        #pathlist.insert(0,os.path.expanduser("~/Applications/RMCProfile.app/Contents/MacOS/exe"))
+    else:
+        lookfor = "rmcprofile"
+    for p in pathlist:
+        if not os.path.exists(p): continue
+        rmcprofile_exe = os.path.abspath(os.path.join(p,lookfor))
+        if is_exe(rmcprofile_exe):
+            if GSASIIpath.GetConfigValue('debug'):
+                print(f'rmcprofile found as {rmcprofile_exe!r}')
+            return rmcprofile_exe
+    if GSASIIpath.GetConfigValue('debug'):
+        print(f'rmcprofile not found. Path searched: {pathlist}')
 
 def findfullrmc():
     '''Find where fullrmc is installed. Tries the following:
